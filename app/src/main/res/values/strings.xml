@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Engi</string>
+
+    <!-- Start screen layout> -->
+    <string name="start_button_text">START</string>
+    <!-- TODO issiaiskinti su tuo ID -->
+    <string name="start_button_id">startButton</string>
+
+</resources>
