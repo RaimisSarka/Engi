@@ -157,11 +157,13 @@ public class Player {
         }
     }
 
-    public void update(int maxXonMap, int maxYonMap){
+    public void update(int maxXonMap, int maxYonMap, int addX, int addY){
 
+        x = x + addX + speed;
+        y = y + addY + speed;
         //Go to right
 
-        if (MOVING_TO_THE_RIGHT) {
+        /*if (MOVING_TO_THE_RIGHT) {
             rowToDraw = 2;
             if ((xOnMap + x) < maxXonMap) {
                 xOnMap = xOnMap + speed;
@@ -214,7 +216,7 @@ public class Player {
                 }
             }
             calcImageColumn();
-        }
+        }*/
     }
 
     public Bitmap getBitmap() {

@@ -18,21 +18,24 @@ import android.view.WindowManager;
 public class GameView extends SurfaceView implements Runnable {
 
     public boolean playing;
+
+    //TODO DEVELOPMENT FLAG
     private static boolean DEVELOPMENT = true;
 
     private Thread gameThread = null;
 
-    //Creating player object
-    private Player engiPlayer;
-
     //Creating map object
     private Map gameMap;
 
-    //Creating JoyStick
-    private Control joyStick;
-
     private int screenWidth;
     private int screenHeight;
+
+    //Coords off visible map tile
+    private int cameraX;
+    private int cameraY;
+
+    int xOnActionDown = 0;
+    int yOnActionDown = 0;
 
     private Paint paint;
     private Canvas canvas;
@@ -46,20 +49,12 @@ public class GameView extends SurfaceView implements Runnable {
 
         gameMap = new Map(context);
 
-        //Creating player
-        engiPlayer = new Player(context,
-                (int) screenWidth / 2, //Position on screen X
-                (int) screenHeight / 2, //Position on screen Y
-                (int) gameMap.getMapSizeX() * gameMap.getTileSize() / 2, //Position on map X
-                (int) gameMap.getMapSizeY() * gameMap.getTileSize() / 2); //Position on map X
-
-        joyStick = new Control(context, screenWidth, screenHeight);
+        cameraX = (gameMap.getMapSizeX() * gameMap.getTileSize() - screenWidth) / 2;
+        cameraY = (gameMap.getMapSizeY()  * gameMap.getTileSize() - screenHeight) / 2;
 
         //initialize drawing objects
         surfaceHolder = getHolder();
         paint = new Paint();
-
-
     }
 
     @Override
@@ -75,10 +70,8 @@ public class GameView extends SurfaceView implements Runnable {
     }
 
     public void update() {
-        engiPlayer.update(
-                gameMap.getMapSizeX() * gameMap.getTileSize(),
-                gameMap.getMapSizeY() * gameMap.getTileSize()
-        );
+        // Current time in nanoseconds
+        long now = System.nanoTime();
     }
 
     public void draw() {
@@ -94,11 +87,11 @@ public class GameView extends SurfaceView implements Runnable {
         mapWidthInPx = gameMap.getMapSizeX() * gameMap.getTileSize();
         mapHeightInPx = gameMap.getMapSizeY() * gameMap.getTileSize();
 
-        drawFromI = engiPlayer.getxOnMap() / gameMap.getTileSize() - engiPlayer.getX() / gameMap.getTileSize();
+        /*drawFromI = gameMap.getMapSizeX() / 2 / gameMap.getTileSize() - screenWidth / 2 / gameMap.getTileSize();
         drawToI = drawFromI + screenWidth / gameMap.getTileSize();
 
-        drawFromJ = engiPlayer.getyOnMap() / gameMap.getTileSize() - engiPlayer.getY() / gameMap.getTileSize();
-        drawToJ = drawFromJ + screenHeight / gameMap.getTileSize();
+        drawFromJ = gameMap.getMapSizeY()/ 2 / gameMap.getTileSize() - screenHeight/ 2 / gameMap.getTileSize();
+        drawToJ = drawFromJ + screenHeight / gameMap.getTileSize();*/
 
         //Checking borders
         if (drawFromI > 0) {
@@ -135,62 +128,31 @@ public class GameView extends SurfaceView implements Runnable {
                 for (int j = drawFromJ; j < drawToJ; j++) {
                     canvas.drawBitmap(
                             gameMap.getBitmap(i, j),
-                            gameMap.GetCoordX(i) - engiPlayer.getxOnMap() + engiPlayer.getX(),
-                            gameMap.GetCoordY(j) - engiPlayer.getyOnMap() + engiPlayer.getY(),
-                            paint);
-                }
-            }
-
-            //Drawing the player
-            canvas.drawBitmap(
-                    engiPlayer.getBitmap(),
-                    engiPlayer.getX(),
-                    engiPlayer.getY(),
-                    paint);
-
-            //Drawing joyStick
-            for (int i = 0; i < joyStick.getImageColCount(); i++) {
-                for (int j = 0; j < joyStick.getImageRowCount(); j++) {
-                    canvas.drawBitmap(
-                            joyStick.getBitmap(i, j),
-                            joyStick.getX() + i * joyStick.getTileSize(),
-                            joyStick.getY() + j * joyStick.getTileSize(),
+                            gameMap.GetCoordX(i) - cameraX,
+                            gameMap.GetCoordY(j) - cameraY,
                             paint);
                 }
             }
 
 
             if (DEVELOPMENT) {
-                //Changing speed
-                engiPlayer.setSpeed(5);
-
-                //Changing direction
-               /* engiPlayer.setMOVING_TO_THE_BOTTOM(false);
-                engiPlayer.setMOVING_TO_THE_TOP(false);
-                engiPlayer.setMOVING_TO_THE_LEFT(false);
-                engiPlayer.setMOVING_TO_THE_RIGHT(false);*/
 
                 //Drawing development-debugging data
                 paint.setColor(Color.WHITE);
                 paint.setTextSize(20);
-                canvas.drawText("posX: " + engiPlayer.getX(), 10, 300, paint);
-                canvas.drawText("posY: " + engiPlayer.getY(), 10, 320, paint);
                 canvas.drawText("screenW: " + screenWidth, 10, 340, paint);
                 canvas.drawText("screenH: " + screenHeight, 10, 360, paint);
                 canvas.drawText("MapW: " + mapWidthInPx, 10, 380, paint);
                 canvas.drawText("MapH: " + mapHeightInPx, 10, 400, paint);
                 canvas.drawText("TileSize: " + gameMap.getTileSize(), 10, 420, paint);
-                canvas.drawText("XposOnMap: " + engiPlayer.getxOnMap(), 10, 440, paint);
-                canvas.drawText("YposOnMap: " + engiPlayer.getyOnMap(), 10, 460, paint);
+                canvas.drawText("XposOnMap: " + mapWidthInPx / 2, 10, 440, paint);
+                canvas.drawText("YposOnMap: " + mapHeightInPx / 2, 10, 460, paint);
                 canvas.drawText("DrawFromI: " + drawFromI, 10, 480, paint);
                 canvas.drawText("DrawToI: " + drawToI, 10, 500, paint);
                 canvas.drawText("DrawFromJ: " + drawFromJ, 10, 520, paint);
                 canvas.drawText("DrawToJ: " + drawToJ, 10, 540, paint);
-                canvas.drawText("ButtonUpX1: " + joyStick.getButtoUpArea().getX1(), 10, 560, paint);
-                canvas.drawText("ButtonUpY1: " + joyStick.getButtoUpArea().getY1(), 10, 580, paint);
-                canvas.drawText("ButtonUpX2: " + joyStick.getButtoUpArea().getX2(), 10, 600, paint);
-                canvas.drawText("ButtonUpY2: " + joyStick.getButtoUpArea().getY2(), 10, 620, paint);
-                canvas.drawText("Movement: " + engiPlayer.isMOVING_TO_THE_TOP(), 10, 640, paint);
+                canvas.drawText("CameraX: " + cameraX, 10, 560, paint);
+                canvas.drawText("CameraY: " + cameraY, 10, 580, paint);
 
             }
             //Unlocking the canvas
@@ -220,109 +182,36 @@ public class GameView extends SurfaceView implements Runnable {
         gameThread.start();
     }
 
-    public String buttonClicked(int x, int y) {
-        String UP = "up";
-        String DOWN = "down";
-        String LEFT = "left";
-        String RIGHT = "right";
-        String ELSEWHERE = "elsewhere";
-
-        String result = ELSEWHERE;
-
-        Control.Coords buttonUpCoords = joyStick.getButtoUpArea();
-        Control.Coords buttonDownCoords = joyStick.getButtoDownArea();
-        Control.Coords buttonLeftCoords = joyStick.getButtoLeftArea();
-        Control.Coords buttonRightCoords = joyStick.getButtoRightArea();
-
-        if (x >= buttonUpCoords.getX1() && x <= buttonUpCoords.getX2() &&
-                y >= buttonUpCoords.getY1() && y <= buttonUpCoords.getY2()) {
-            result = UP;
-        }
-
-        if (x >= buttonDownCoords.getX1() && x <= buttonDownCoords.getX2() &&
-                y >= buttonDownCoords.getY1() && y <= buttonDownCoords.getY2()) {
-            result = DOWN;
-        }
-
-        if (x >= buttonLeftCoords.getX1() && x <= buttonLeftCoords.getX2() &&
-                y >= buttonLeftCoords.getY1() && y <= buttonLeftCoords.getY2()) {
-            result = LEFT;
-        }
-
-        if (x >= buttonRightCoords.getX1() && x <= buttonRightCoords.getX2() &&
-                y >= buttonRightCoords.getY1() && y <= buttonRightCoords.getY2()) {
-            result = RIGHT;
-        }
-        return result;
-    }
-
-    public void chooseDirection(int xx, int yy){
-
-        switch (buttonClicked(xx, yy)) {
-
-            case "up":
-                engiPlayer.setMOVING_TO_THE_TOP(true);
-                engiPlayer.setMOVING_TO_THE_RIGHT(false);
-                engiPlayer.setMOVING_TO_THE_LEFT(false);
-                engiPlayer.setMOVING_TO_THE_BOTTOM(false);
-                break;
-
-            case "down":
-                engiPlayer.setMOVING_TO_THE_TOP(false);
-                engiPlayer.setMOVING_TO_THE_RIGHT(false);
-                engiPlayer.setMOVING_TO_THE_LEFT(false);
-                engiPlayer.setMOVING_TO_THE_BOTTOM(true);
-                break;
-
-            case "right":
-                engiPlayer.setMOVING_TO_THE_TOP(false);
-                engiPlayer.setMOVING_TO_THE_RIGHT(true);
-                engiPlayer.setMOVING_TO_THE_LEFT(false);
-                engiPlayer.setMOVING_TO_THE_BOTTOM(false);
-                break;
-
-            case "left":
-                engiPlayer.setMOVING_TO_THE_TOP(false);
-                engiPlayer.setMOVING_TO_THE_RIGHT(false);
-                engiPlayer.setMOVING_TO_THE_LEFT(true);
-                engiPlayer.setMOVING_TO_THE_BOTTOM(false);
-                break;
-
-            default:
-                engiPlayer.setMOVING_TO_THE_TOP(false);
-                engiPlayer.setMOVING_TO_THE_RIGHT(false);
-                engiPlayer.setMOVING_TO_THE_LEFT(false);
-                engiPlayer.setMOVING_TO_THE_BOTTOM(false);
-                break;
-        }
-    }
-
     @Override
     public boolean onTouchEvent(MotionEvent motionEvent) {
+
+        int x = 0;
+        int y = 0;
+
         switch (motionEvent.getAction() & MotionEvent.ACTION_MASK) {
 
             // Player has touched the screen
             case MotionEvent.ACTION_DOWN:
+                //TODO check if there are somethig to select
+                xOnActionDown = (int) motionEvent.getX();
+                yOnActionDown = (int) motionEvent.getY();
 
-                int x = (int) motionEvent.getX();
-                int y = (int) motionEvent.getY();
-                chooseDirection(x, y);
                 break;
 
             case MotionEvent.ACTION_MOVE:
-
-                x = (int) motionEvent.getX();
+                x=  (int) motionEvent.getX();
                 y = (int) motionEvent.getY();
-                chooseDirection(x, y);
+
+
+                //update camaras coords
+                cameraX = cameraX + xOnActionDown - x;
+                cameraY = cameraY + yOnActionDown - y;
+                xOnActionDown = x;
+                yOnActionDown = y;
                 break;
 
-            // Player has removed finger from screen
+
             case MotionEvent.ACTION_UP:
-                
-                engiPlayer.setMOVING_TO_THE_TOP(false);
-                engiPlayer.setMOVING_TO_THE_RIGHT(false);
-                engiPlayer.setMOVING_TO_THE_LEFT(false);
-                engiPlayer.setMOVING_TO_THE_BOTTOM(false);
 
                 break;
         }
