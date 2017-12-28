@@ -1,6 +1,9 @@
 package com.raimissarka.engi;
 
 import android.content.Context;
+import android.content.pm.ActivityInfo;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -30,6 +33,9 @@ public class GameView extends SurfaceView implements Runnable {
     private int screenWidth;
     private int screenHeight;
 
+    //Engi character
+    private EngiSprite engi;
+
     //Coords off visible map tile
     private int cameraX;
     private int cameraY;
@@ -55,6 +61,11 @@ public class GameView extends SurfaceView implements Runnable {
         //initialize drawing objects
         surfaceHolder = getHolder();
         paint = new Paint();
+
+        Bitmap engiBitmap = BitmapFactory.decodeResource(context.getResources(),R.drawable.engi);
+        engi = new EngiSprite(context, engiBitmap, 3, 4, screenWidth / 2, screenHeight / 2);
+
+
     }
 
     @Override
@@ -70,8 +81,7 @@ public class GameView extends SurfaceView implements Runnable {
     }
 
     public void update() {
-        // Current time in nanoseconds
-        long now = System.nanoTime();
+
     }
 
     public void draw() {
@@ -87,11 +97,11 @@ public class GameView extends SurfaceView implements Runnable {
         mapWidthInPx = gameMap.getMapSizeX() * gameMap.getTileSize();
         mapHeightInPx = gameMap.getMapSizeY() * gameMap.getTileSize();
 
-        /*drawFromI = gameMap.getMapSizeX() / 2 / gameMap.getTileSize() - screenWidth / 2 / gameMap.getTileSize();
+        drawFromI = cameraX / gameMap.getTileSize();
         drawToI = drawFromI + screenWidth / gameMap.getTileSize();
 
-        drawFromJ = gameMap.getMapSizeY()/ 2 / gameMap.getTileSize() - screenHeight/ 2 / gameMap.getTileSize();
-        drawToJ = drawFromJ + screenHeight / gameMap.getTileSize();*/
+        drawFromJ = cameraY / gameMap.getTileSize();
+        drawToJ = drawFromJ + screenHeight / gameMap.getTileSize();
 
         //Checking borders
         if (drawFromI > 0) {
@@ -134,19 +144,25 @@ public class GameView extends SurfaceView implements Runnable {
                 }
             }
 
+            engi.update();
+            engi.draw(canvas);
+
+
 
             if (DEVELOPMENT) {
 
                 //Drawing development-debugging data
                 paint.setColor(Color.WHITE);
+                canvas.drawRect(5, 320, 205, 600, paint);
+                paint.setColor(Color.BLACK);
                 paint.setTextSize(20);
                 canvas.drawText("screenW: " + screenWidth, 10, 340, paint);
                 canvas.drawText("screenH: " + screenHeight, 10, 360, paint);
                 canvas.drawText("MapW: " + mapWidthInPx, 10, 380, paint);
                 canvas.drawText("MapH: " + mapHeightInPx, 10, 400, paint);
                 canvas.drawText("TileSize: " + gameMap.getTileSize(), 10, 420, paint);
-                canvas.drawText("XposOnMap: " + mapWidthInPx / 2, 10, 440, paint);
-                canvas.drawText("YposOnMap: " + mapHeightInPx / 2, 10, 460, paint);
+                canvas.drawText("EngiPosX: " + engi.getX(), 10, 440, paint);
+                canvas.drawText("EngiPosY: " + engi.getY(), 10, 460, paint);
                 canvas.drawText("DrawFromI: " + drawFromI, 10, 480, paint);
                 canvas.drawText("DrawToI: " + drawToI, 10, 500, paint);
                 canvas.drawText("DrawFromJ: " + drawFromJ, 10, 520, paint);
@@ -182,11 +198,28 @@ public class GameView extends SurfaceView implements Runnable {
         gameThread.start();
     }
 
+    public boolean thereIsSelectible (int actionDownX, int actionDownY){
+        boolean result = false;
+        if (actionDownX > engi.getX() &&
+                actionDownX < engi.getX() + engi.getEngiTileSize() &&
+                actionDownY > engi.getY() &&
+                actionDownY < engi.getY() + engi.getEngiTileSize()){
+            result = true;
+        }
+        return result;
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent motionEvent) {
 
         int x = 0;
         int y = 0;
+
+        int oldCameraX;
+        int oldCameraY;
+
+        int engiXOnMap;
+        int engiYOnMap;
 
         switch (motionEvent.getAction() & MotionEvent.ACTION_MASK) {
 
@@ -196,18 +229,73 @@ public class GameView extends SurfaceView implements Runnable {
                 xOnActionDown = (int) motionEvent.getX();
                 yOnActionDown = (int) motionEvent.getY();
 
+                if (thereIsSelectible(xOnActionDown, yOnActionDown)) {
+                    if (engi.ismSelected()){
+                        engi.setSelected(false);
+                    } else {
+                        engi.setSelected(true);
+                    }
+                } else {
+                    if (engi.ismSelected()) {
+                        int movingVectorX = xOnActionDown - engi.getX() - engi.getEngiTileSize() / 2;
+                        int movingVectorY = yOnActionDown - engi.getY() - engi.getEngiTileSize() / 2;
+
+                        engi.setMovingVectorX(movingVectorX);
+                        engi.setMovingVectorY(movingVectorY);
+                        engi.setmDestinationX(xOnActionDown - engi.getEngiTileSize() / 2);
+                        engi.setmDestinationY(yOnActionDown - engi.getEngiTileSize() / 2);
+                    }
+                }
+
                 break;
 
             case MotionEvent.ACTION_MOVE:
                 x=  (int) motionEvent.getX();
                 y = (int) motionEvent.getY();
 
+                engiXOnMap = engi.getX();
+                engiYOnMap = engi.getY();
 
-                //update camaras coords
+                //Save coords for calculation of difference
+                oldCameraX = cameraX;
+                oldCameraY = cameraY;
+
+                //update cameras coords
                 cameraX = cameraX + xOnActionDown - x;
                 cameraY = cameraY + yOnActionDown - y;
+
+                //checking boarders
+                if (cameraX + screenWidth > gameMap.getMapSizeX()*gameMap.getTileSize()) {
+                    cameraX = gameMap.getMapSizeX()*gameMap.getTileSize() - screenWidth;
+                }
+
+                if (cameraY + screenHeight > gameMap.getMapSizeY()*gameMap.getTileSize()) {
+                    cameraY = gameMap.getMapSizeY()*gameMap.getTileSize() - screenHeight;
+                }
+
+                if (cameraX < 0) {
+                    cameraX = 0;
+                }
+
+                if (cameraY < 0) {
+                    cameraY = 0;
+                }
+
+                //Update Engis coords
+                engiXOnMap = engiXOnMap - cameraX + oldCameraX;
+                engiYOnMap = engiYOnMap - cameraY + oldCameraY;
+
+
+                engi.setPos(engiXOnMap, engiYOnMap);
+
+                engi.setMovingVectorX(engi.getMovingVectorX() - cameraX + oldCameraX);
+                engi.setMovingVectorY(engi.getMovingVectorY() - cameraY + oldCameraY);
+                engi.setmDestinationX(engi.getmDestinationX() - cameraX + oldCameraX);
+                engi.setmDestinationY(engi.getmDestinationY() - cameraY + oldCameraY);
+
                 xOnActionDown = x;
                 yOnActionDown = y;
+
                 break;
 
 
