@@ -169,6 +169,11 @@ public class GameView extends SurfaceView implements Runnable {
                 canvas.drawText("DrawToJ: " + drawToJ, 10, 540, paint);
                 canvas.drawText("CameraX: " + cameraX, 10, 560, paint);
                 canvas.drawText("CameraY: " + cameraY, 10, 580, paint);
+                canvas.drawLine(engi.getX() + engi.getEngiTileSize() / 2,
+                        engi.getY() + engi.getEngiTileSize() / 2,
+                        engi.getmDestinationX() + engi.getEngiTileSize() / 2,
+                        engi.getmDestinationY() + engi.getEngiTileSize() / 2,
+                        paint);
 
             }
             //Unlocking the canvas
@@ -244,6 +249,9 @@ public class GameView extends SurfaceView implements Runnable {
                         engi.setMovingVectorY(movingVectorY);
                         engi.setmDestinationX(xOnActionDown - engi.getEngiTileSize() / 2);
                         engi.setmDestinationY(yOnActionDown - engi.getEngiTileSize() / 2);
+
+                        //Remove selection
+                        engi.setSelected(false);
                     }
                 }
 

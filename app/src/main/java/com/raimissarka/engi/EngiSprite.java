@@ -30,7 +30,7 @@ public class EngiSprite extends Sprite {
     private Bitmap selectionPicture;
 
     // Velocity of game character (pixel/millisecond)
-    public static final float VELOCITY = 0.1f;
+    public static final float VELOCITY = 1f;
 
     public int getX() {
         return x;
@@ -167,19 +167,34 @@ public class EngiSprite extends Sprite {
         mDiffX = mDestinationX - x;
         mDiffY = mDestinationY - y;
 
-        if (mDiffY > 0) {
-            if (mDiffY >= mDiffX) {
-                mRowToDraw = 0;
-            } else {
+        // 0 - down
+        // 1 - up
+        // 2 - right
+        // 3 - left
+        if (mDiffX > 0) {
+            if (mDiffY > 0){
+                if (mDiffY > mDiffX){
+                    mRowToDraw = 0;
+                } else {
+                    mRowToDraw = 2;
+                }
+            } else if (mDiffX > mDiffY * -1) {
                 mRowToDraw = 2;
-            }
-        } else {
-            if (mDiffY <= mDiffX) {
+            } else {
                 mRowToDraw = 1;
+            }
+        } else if (mDiffY > 0) {
+            if (mDiffY > mDiffX * -1) {
+                mRowToDraw = 0;
             } else {
                 mRowToDraw = 3;
             }
+        } else if (mDiffY * -1 > mDiffX * -1){
+            mRowToDraw = 1;
+        } else  {
+            mRowToDraw = 3;
         }
+
 
         return mRowToDraw;
     }
@@ -200,6 +215,7 @@ public class EngiSprite extends Sprite {
         if (mSelected) {
             canvas.drawBitmap(selectionPicture, x - getEngiTileSize(), y - getEngiTileSize(), null);
         }
+
         canvas.drawBitmap(bitmap, x, y, null);
         lastDrawNanoTime = System.nanoTime();
     }
